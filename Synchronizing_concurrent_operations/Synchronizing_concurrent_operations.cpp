@@ -169,9 +169,9 @@ class move_only
 {
 public:
     move_only();
-    move_only(move_only&&);
+    move_only(move_only&&) noexcept;
     move_only(move_only const&) = delete;
-    move_only& operator=(move_only&&);
+    move_only& operator=(move_only&&) noexcept;
     move_only& operator=(move_only const&) = delete;
     void operator()();
 };
@@ -259,7 +259,7 @@ double square_root(double x)
 }
 
 std::future<double> f = std::async(std::launch::async, square_root, -1);
-double y=f.get();
+double y = f.get();
 
 // extern std::promise<double> some_promise;
 // try
@@ -356,8 +356,8 @@ std::list<T> parallel_quick_sort(std::list<T> input)
 
     lower_part.splice(lower_part.end(), input, input.begin(), divide_point);
 
-    std::future<std::list<T>> new_lower( std::async(std::launch::async,
-        &parallel_quick_sort<T>, std::move(lower_part)));
+    std::future<std::list<T>> new_lower(std::async(std::launch::async,
+                                                   &parallel_quick_sort<T>, std::move(lower_part)));
     std::future<std::list<T>> new_higher(parallel_quick_sort<T>(std::move(input)));
 
     result.splice(result.end(), new_higher);

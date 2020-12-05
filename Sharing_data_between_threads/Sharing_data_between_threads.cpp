@@ -1,6 +1,3 @@
-// Sharing_data_between_threads.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
 #include <iostream>
 #include <list>
 #include <mutex>
@@ -11,7 +8,6 @@
 #include <memory>
 #include <stack>
 #include <shared_mutex>
-#include <compare>
 
 // Protecting a list with a mutex
 std::list<int> some_list;
@@ -28,7 +24,7 @@ bool list_contains(const int value_to_find)
 {
     std::lock_guard<std::mutex> guard(some_mutex);
     // std::scoped_lock guard(some_mutex);
-    return std::find(some_list.begin(), some_list.end(), value_to_find)
+    return std::ranges::find(some_list, value_to_find)
         != some_list.end();
 }
 
@@ -104,7 +100,7 @@ public:
 };
 
 // A fleshed-out class definition for a thread-safe stack
-struct empty_stack : std::exception
+struct empty_stack final : std::exception
 {
     const char* what() const throw() override;
 };
@@ -162,7 +158,7 @@ class some_big_object
 {
 };
 
-void swap(some_big_object& lhs, some_big_object& rhs);
+void swap(some_big_object& lhs, some_big_object& rhs) noexcept;
 
 class x
 {
@@ -174,7 +170,7 @@ public:
     {
     }
 
-    friend void swap(x& lhs, x& rhs)
+    friend void swap(x& lhs, x& rhs) noexcept
     {
         if (&lhs == &rhs)
         {
@@ -349,9 +345,8 @@ int low_level_func()
     return do_low_level_stuff();
 }
 
-void high_level_stuff(int some_param)
+void high_level_stuff(const int some_param)
 {
-    some_param = 0;
     std::cout << some_param << '\n';
 }
 
@@ -391,7 +386,7 @@ void thread_b()
 
 // Using std::lock() and std::unique_lock in a swap operation
 class some_big_object;
-void swap(some_big_object& lhs, some_big_object& rhs);
+void swap(some_big_object& lhs, some_big_object& rhs) noexcept;
 
 class X
 {
@@ -403,7 +398,7 @@ public:
     {
     }
 
-    friend void swap(X& lhs, X& rhs)
+    friend void swap(X& lhs, X& rhs) noexcept
     {
         if (&lhs == &rhs)
         {

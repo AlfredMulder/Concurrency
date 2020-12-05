@@ -22,7 +22,7 @@ struct user
     [[nodiscard]]
     auto get_safe_name_callback() const
     {
-        return [*this](const std::string& b)// *this!
+        return [*this](const std::string& b) // *this!
         {
             return name + b;
         };
@@ -147,15 +147,15 @@ int main()
     // is an execution policy type used as a unique type to disambiguate parallel algorithm overloading and
     // require that a parallel algorithm’s execution
     // not be
-    // parallelised.
+    // parallelized.
     //
     // - parallel_policy - It
     // is an execution policy type used as a unique type to disambiguate parallel algorithm overloading and indicate
-    // that a parallel algorithm’s execution may be parallelised.
+    // that a parallel algorithm’s execution may be parallelized.
     //
     // -parallel_unsequenced_policy - It
     // is an execution policy type used as a unique type to disambiguate parallel algorithm overloading and
-    // indicate that a parallel algorithm’s execution may be parallelised and vectorised.
+    // indicate that a parallel algorithm’s execution may be parallelized and vectorised.
     std::vector<int> vec2(1000);
     std::iota(vec2.begin(), vec2.end(), 0);
     std::vector<int> output;

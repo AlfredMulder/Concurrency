@@ -386,13 +386,13 @@ auto thread_1() noexcept
     sync1.store(true, std::memory_order_release);
 }
 
-auto thread_2()noexcept
+auto thread_2() noexcept
 {
     while (!sync1.load(std::memory_order_acquire));
     sync2.store(true, std::memory_order_release);
 }
 
-auto thread_3()noexcept
+auto thread_3() noexcept
 {
     while (!sync2.load(std::memory_order_acquire));
     assert(data_1[0].load(std::memory_order_relaxed)==42);
@@ -404,7 +404,8 @@ auto thread_3()noexcept
 
 // combine sync1 and sync2 in sync to use memory_order_acq_rel
 std::atomic<bool> sync(false);
-auto thread_1_1()noexcept
+
+auto thread_1_1() noexcept
 {
     data_1[0].store(42, std::memory_order_relaxed);
     data_1[1].store(97, std::memory_order_relaxed);
@@ -414,18 +415,18 @@ auto thread_1_1()noexcept
     sync.store(true, std::memory_order_release);
 }
 
-auto thread_2_1()noexcept
+auto thread_2_1() noexcept
 {
-    auto expected=true;
-    while (!sync.compare_exchange_strong(expected, 2, std::memory_order_acq_rel))
+    auto expected = true;
+    while (!sync.compare_exchange_strong(expected, true, std::memory_order_acq_rel))
     {
-        expected=true;
+        expected = true;
     }
 }
 
-auto thread_3_1()noexcept
+auto thread_3_1() noexcept
 {
-    while(sync.load(std::memory_order_acquire) < 2);
+    while (sync.load(std::memory_order_acquire) < 2);
     assert(data_1[0].load(std::memory_order_relaxed)==42);
     assert(data_1[1].load(std::memory_order_relaxed)==97);
     assert(data_1[2].load(std::memory_order_relaxed)==17);
@@ -446,6 +447,7 @@ struct X
     int i = 0;
     std::string s;
 };
+
 std::atomic<X*> p_x;
 std::atomic<std::shared_ptr<X>> v;
 std::atomic<int> a;
@@ -455,7 +457,7 @@ auto create_x()
     auto ptr = std::shared_ptr<X>();
     ptr->i = 42;
     ptr->s = "hello";
-    
+
     a.store(99, std::memory_order_relaxed);
     v.store(ptr, std::memory_order_release);
 }
@@ -465,7 +467,7 @@ auto create_x_raw_ptr()
     auto* ptr = new X;
     ptr->i = 42;
     ptr->s = "hello";
-    
+
     a.store(99, std::memory_order_relaxed);
     p_x.store(ptr, std::memory_order_release);
 }
@@ -473,7 +475,7 @@ auto create_x_raw_ptr()
 auto use_x()
 {
     auto ptr = std::make_shared<X>();
-    while(!((ptr = v.load(std::memory_order_consume))))
+    while (!((ptr = v.load(std::memory_order_consume))))
     {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
@@ -495,6 +497,7 @@ auto use_x()
 // Reading values from a queue with atomic operations
 std::vector<int> queue_data;
 std::atomic<int> count;
+
 auto populate_queue()
 {
     unsigned constexpr number_of_items = 20;
@@ -511,10 +514,8 @@ auto consume_queue_items() noexcept
     while (true)
     {
         auto item_index = 0;
-        if ((item_index=count.fetch_sub(1,std::memory_order_acquire) <= 0))
+        if ((item_index = count.fetch_sub(1, std::memory_order_acquire) <= 0))
         {
-            // wait_for_more_items();
-            continue;
         }
         // process(queue_data[item_index-1]);
     }
@@ -539,23 +540,26 @@ auto consume_queue_items() noexcept
 // certain operations can’t cross.
 
 // Relaxed operations can be ordered with fences
-std::atomic<bool> x_5,y_5;
+std::atomic<bool> x_5, y_5;
 std::atomic<int> z_5;
+
 auto write_x_then_y_5() noexcept
 {
-    x_5.store(true,std::memory_order_relaxed);
+    x_5.store(true, std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_release);
-    y_5.store(true,std::memory_order_relaxed);
+    y_5.store(true, std::memory_order_relaxed);
 }
+
 auto read_y_then_x_5() noexcept
 {
-    while(!y_5.load(std::memory_order_relaxed));
+    while (!y_5.load(std::memory_order_relaxed));
     std::atomic_thread_fence(std::memory_order_acquire);
-    if(x_5.load(std::memory_order_relaxed))
+    if (x_5.load(std::memory_order_relaxed))
     {
         ++z_5;
     }
 }
+
 // if an acquire operation sees the result of
 // a store that takes place after a release fence, the fence synchronizes with that acquire
 // operation; and if a load that takes place before an acquire fence sees the result of a
@@ -575,20 +579,22 @@ auto read_y_then_x_5() noexcept
 // atomic operations.
 
 // Enforcing ordering on non-atomic operations
-bool x_6=false; //!!!!!
+bool x_6 = false; //!!!!!
 std::atomic<bool> y_6;
 std::atomic<int> z_6;
+
 auto write_x_then_y_6() noexcept
 {
-    x_6=true;
+    x_6 = true;
     std::atomic_thread_fence(std::memory_order_release);
-    y_6.store(true,std::memory_order_relaxed);
+    y_6.store(true, std::memory_order_relaxed);
 }
+
 auto read_y_then_x_6() noexcept
 {
-    while(!y_6.load(std::memory_order_relaxed));
+    while (!y_6.load(std::memory_order_relaxed));
     std::atomic_thread_fence(std::memory_order_acquire);
-    if(x_6)
+    if (x_6)
         ++z_6;
 }
 
@@ -785,9 +791,9 @@ int main()
     t1.join();
     t2.join();
     //--------------------------------------------------------------------//
-    x_5=false;
-    y_5=false;
-    z_5=0;
+    x_5 = false;
+    y_5 = false;
+    z_5 = 0;
     std::thread a_5(write_x_then_y);
     std::thread b_5(read_y_then_x);
     a_5.join();

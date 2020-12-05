@@ -59,7 +59,9 @@ class thread_guard
 {
     std::thread& t_;
 public:
-    constexpr explicit thread_guard(std::thread& t): t_(t) { }
+    constexpr explicit thread_guard(std::thread& t): t_(t)
+    {
+    }
 
     ~thread_guard()
     {
@@ -69,10 +71,11 @@ public:
         }
     }
 
-    auto operator<=>(const thread_guard&) const = default;
+    auto operator<=>(const thread_guard&) const = delete;
 };
 
 struct func;
+
 void f_1()
 {
     auto some_local_state = 0;
@@ -133,6 +136,7 @@ void f_2()
     scoped_thread t{std::thread(func(some_local_state))};
     // do_something_in_current_thread();
 }
+
 int main()
 {
     std::cout << "Hello World!\n";
@@ -229,6 +233,7 @@ public:
 void do_work(unsigned id)
 {
     id = 0u;
+    std::cout << id << '\n';
 };
 
 // A naïve parallel version of std::accumulate
@@ -282,7 +287,7 @@ void some_core_part_of_algorithm()
     if (std::this_thread::get_id() == master_thread)
     {
         // do_master_thread_work();
-        std::cout<<std::this_thread::get_id();
+        std::cout << std::this_thread::get_id();
     }
     // do_common_work();
 }
