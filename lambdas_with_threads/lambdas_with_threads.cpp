@@ -72,6 +72,7 @@ int main()
     auto counter = 0;
 
     std::vector<std::thread> threads;
+    threads.reserve(5); //!!!
     for (auto i = 0; i < 5; ++i)
     {
         threads.emplace_back([&counter]()
