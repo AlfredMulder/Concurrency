@@ -220,6 +220,13 @@ private: // Members
     std::shared_ptr<c_dispatcher> m_dispatcher_;
 };
 
+// !!!
+// The looper is just a control-construct attached to a single worker-thread and can not handle parallelized execution
+// or workload balancing, which Thread-Pools with work-stealing are perfect for.
+//
+// But, if there’s a single worker thread required for a specific type of tasks, the Looper can be a more simple and
+// more comprehensible approach to solve the multithreading issue!
+
 int main(int argc, char* argv[])
 {
     auto looper = std::make_unique<clooper>();
@@ -255,3 +262,13 @@ int main(int argc, char* argv[])
     looper->stop();
     looper = nullptr;
 }
+
+// TODO
+
+// -It can be extended using <future> and it’s std::future and std::promise features to execute asynchronously and
+// receive a result.
+// -The dispatcher can be extended to permit priority execution (immediate execution) and delayed execution.
+// -The entire looper can be made lock-free.
+// -We could attach a messaging system upon the looper.
+// We could support handlers and different handler-types for dispatched messages, i.e. functors, which are
+// automatically invoked based on some identifying criteria in the message or being provided by the dispatcher.
