@@ -54,9 +54,9 @@ std::mutex m;
 // Fundamentally, std::condition_variable::wait is an optimization over a busy-wait.
 
 template <typename Predicate>
-void minimal_wait(std::unique_lock<std::mutex>& lk, Predicate pred)
+void minimal_wait(std::unique_lock<std::mutex>& lk, Predicate predecessor)
 {
-    while (!pred())
+    while (!predecessor())
     {
         lk.unlock();
         lk.lock();
@@ -67,10 +67,43 @@ void minimal_wait(std::unique_lock<std::mutex>& lk, Predicate pred)
 template <typename T>
 class thread_safe_queue
 {
+public:
+    thread_safe_queue(thread_safe_queue&& other) noexcept
+        : mut_(std::move(other.mut_)),
+          data_queue_(std::move(other.data_queue_)),
+          data_cond_(std::move(other.data_cond_))
+    {
+    }
+
+    thread_safe_queue& operator=(thread_safe_queue&& other) noexcept
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+        mut_ = std::move(other.mut_);
+        data_queue_ = std::move(other.data_queue_);
+        data_cond_ = std::move(other.data_cond_);
+        return *this;
+    }
+
+    thread_safe_queue& operator=(thread_safe_queue other)
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+        mut_ = std::move(other.mut_);
+        data_queue_ = std::move(other.data_queue_);
+        data_cond_ = std::move(other.data_cond_);
+        return *this;
+    }
+
 private:
     mutable std::mutex mut_;
     std::queue<T> data_queue_;
     std::condition_variable data_cond_;
+
 public:
     thread_safe_queue()
     {
@@ -141,16 +174,20 @@ public:
         std::lock_guard<std::mutex> lk(mut_);
         return data_queue_.empty();
     }
+
+    ~thread_safe_queue()
+    {
+    }
 };
 
 // Passing arguments to a function with std::async
-struct X
+struct x_mem
 {
     void foo(int, std::string const&);
     std::string bar(std::string const&);
 };
 
-// X x;
+// x_mem x;
 // auto f1 = std::async(&X::foo, &x, 42, "hello");
 // auto f2 = std::async(&X::bar, x, "goodbye");
 
@@ -168,12 +205,29 @@ struct y
 class move_only
 {
 public:
-    move_only();
-    move_only(move_only&&) noexcept;
-    move_only(move_only const&) = delete;
-    move_only& operator=(move_only&&) noexcept;
-    move_only& operator=(move_only const&) = delete;
-    void operator()();
+    move_only()
+    = default;
+
+    move_only(move_only&&) noexcept
+    {
+    }
+
+    move_only(move_only const&)
+    = default;
+
+    move_only& operator=(move_only&&) noexcept
+    {
+    }
+
+    move_only& operator=(move_only const&)
+    {
+    }
+
+    void operator()() const
+    {
+    }
+
+    ~move_only() = default;
 };
 
 // auto f5 = std::async(move_only());
@@ -313,7 +367,7 @@ double y = f.get();
 //     }
 // }
 
-// Listing 4.12 A sequential implementation of Quicksort
+// Listing 4.12 A sequential implementation of Quick-sort
 template <typename T>
 std::list<T> sequential_quick_sort(std::list<T> input)
 {
@@ -337,7 +391,7 @@ std::list<T> sequential_quick_sort(std::list<T> input)
     return result;
 }
 
-// Parallel Quicksort using futures
+// Parallel Quick-sort using futures
 template <typename T>
 std::list<T> parallel_quick_sort(std::list<T> input)
 {
@@ -664,17 +718,17 @@ std::future<std::invoke_result<Func(Arg&&)>> spawn_task(Func&& func, Arg&& arg)
 //             }
 //         };
 
-// LATCH - A latch is a syn-
-// chronization object that becomes ready when its counter is decremented to zero. Its
+// LATCH - A latch is a synchronization object that becomes ready when its counter is
+// decremented to zero. Its
 // name comes from the fact that it latches the output—once it is ready, it stays ready
 // until it is destroyed. A latch is thus a lightweight facility for waiting for a series of
 // events to occur.
 
 // BARRIER is a reusable synchronization component used for
-// internal synchronization between a set of threads. Whereas a latch doesn’t care which
+// internal synchronization between a set of threads. Whereas a latch doesn't care which
 // threads decrement the counter—the same thread can decrement the counter multi-
-// ple times, or multiple threads can each decrement the counter once, or some combi-
-// nation of the two—with barriers, each thread can only arrive at the barrier once per
+// ple times, or multiple threads can each decrement the counter once, or some combination
+// of the two—with barriers, each thread can only arrive at the barrier once per
 // cycle. When threads arrive at the barrier, they block until all of the threads involved
 // have arrived at the barrier, at which point they are all released. The barrier can then
 // be reused—the threads can then arrive at the barrier again to wait for all the threads
@@ -739,8 +793,7 @@ std::future<std::invoke_result<Func(Arg&&)>> spawn_task(Func&& func, Arg&& arg)
 // The interface to std::experimental::flex_barrier differs from that of std::
 // experimental::barrier in only one way: there is an additional constructor that takes
 // a completion function, as well as a thread count. This function is run on exactly one
-// of the threads that arrived at the barrier, once all the threads have arrived at the bar-
-// rier.
+// of the threads that arrived at the barrier, once all the threads have arrived at the barrier.
 
 // Using std::flex_barrier to provide a serial region
 // void process_data(data_source& source, data_sink& sink)
@@ -778,13 +831,13 @@ std::future<std::invoke_result<Func(Arg&&)>> spawn_task(Func&& func, Arg&& arg)
 //     }
 // }
 
-std::ostream& operator<<(std::ostream& ostr, const std::list<int>& list)
+std::ostream& operator<<(std::ostream& output_stream, const std::list<int>& list)
 {
     for (const auto& i : list)
     {
-        ostr << " " << i;
+        output_stream << " " << i;
     }
-    return ostr;
+    return output_stream;
 }
 
 std::optional<std::string> create(bool i)
@@ -816,12 +869,12 @@ int main(int argc, char* argv[])
     // std::cout << b << '\n';
     std::list<int> i = {1, 2, 3, 3, 2, 1, 5, 4, 5, 67, 3, 21, 3, 325, 346, 6};
     std::list<int> i_2 = {8, 9, 10, 11, 12};
-    auto iter = i.begin();
-    std::advance(iter, 2);
-    i.splice(iter, i_2);
+    auto iterate = i.begin();
+    std::advance(iterate, 2);
+    i.splice(iterate, i_2);
     std::cout << "i: " << i << "\n";
     std::cout << "i_2: " << i_2 << "\n";
-    i_2.splice(i_2.begin(), i, iter, i.end());
+    i_2.splice(i_2.begin(), i, iterate, i.end());
     std::cout << "i: " << i << "\n";
     std::cout << "i_2: " << i_2 << "\n";
 

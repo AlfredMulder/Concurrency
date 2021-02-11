@@ -6,11 +6,9 @@
 #include <gsl/pointers>
 #include <gsl/span>
 #include <ranges>
-#include <coroutine>
 
-// You can also avoid the unde-
-// fined behavior by using atomic operations to access the memory location involved
-// in the race. This doesn’t prevent the race itself—which of the atomic operations
+// You can also avoid the undefined behavior by using atomic operations to access the memory location involved
+// in the race. This doesn't prevent the race itself—which of the atomic operations
 // touches the memory location first is still not specified—but it does bring the program
 // back into the realm of defined behavior.
 
@@ -27,7 +25,7 @@
 // _LLONG_LOCK_FREE, and ATOMIC_POINTER_LOCK_FREE. They specify the lock-free status
 // of the corresponding atomic types for the specified built-in types and their unsigned
 // counterparts
-// The only type that doesn’t provide an is_lock_free() member function is
+// The only type that doesn't provide an is_lock_free() member function is
 // std::atomic_flag
 
 // The standard atomic types are not copyable or assignable in the conventional
@@ -50,7 +48,7 @@
 // loop on test_and_set() until the old value is false, indicating that this thread set the
 // value to true. Unlocking the mutex is simply a matter of clearing the flag.
 
-// Implementation of a spinlock mutex using std::atomic_flag
+// Implementation of a spin-lock mutex using std::atomic_flag
 class spin_lock_mutex
 {
     std::atomic_flag flag_;
@@ -71,8 +69,8 @@ public:
 //  the assignment operators they support return values (of
 // the corresponding non-atomic type) rather than references. If a reference to the
 // atomic variable was returned, any code that depended on the result of the assignment
-// would then have to explicitly load the value, potentially getting the result of a modifi-
-// cation by another thread. By returning the result of the assignment as a non-atomic
+// would then have to explicitly load the value, potentially getting the result of a modification
+// by another thread. By returning the result of the assignment as a non-atomic
 // value, you can avoid this additional load, and you know that the value obtained is the
 // value stored.
 
@@ -80,19 +78,19 @@ public:
 // store was done (because
 // the values were equal), and fail otherwise; the return value is true for success, and
 // false for failure
-// For compare_exchange_weak(), the store might not be successful even if the origi-
-// nal value was equal to the expected value, in which case the value of the variable is
+// For compare_exchange_weak(), the store might not be successful even if the original
+// value was equal to the expected value, in which case the value of the variable is
 // unchanged and the return value of compare_exchange_weak() is false.
 // This is most
 // likely to happen on machines that lack a single compare-and-exchange instruction, if
 // the processor can’t guarantee that the operation has been done atomically—possibly
 // because the thread performing the operation was switched out in the middle of the
 // necessary sequence of instructions and another thread scheduled in its place by the
-// operating system where there are more threads than processors. This is called a spuri-
-// ous failure, because the reason for the failure is a function of timing rather than the
+// operating system where there are more threads than processors. This is called a spurious
+// failure, because the reason for the failure is a function of timing rather than the
 // values of the variables.
 // On the other hand, compare_exchange_strong() is guaranteed to return false
-// only if the value wasn’t equal to the expected value. This can eliminate the need for
+// only if the value wasn't equal to the expected value. This can eliminate the need for
 // loops like the one shown where you want to know whether you successfully changed a
 // variable or whether another thread got there first.
 
@@ -156,9 +154,9 @@ auto get_num() noexcept
     return ++i;
 }
 
-// SEQUENTIALLY CONSISTENT ORDERING - If all oper-
-// ations on instances of atomic types are sequentially consistent, the behavior of a
-// multithreaded program is as if all these operations were performed in some particular
+// SEQUENTIALLY CONSISTENT ORDERING - If all operations on instances of atomic types
+// are sequentially consistent, the behavior of a multi-threaded program is as if all
+// these operations were performed in some particular
 // sequence by a single thread. operations can’t be reordered
 
 // Sequential consistency implies a total ordering
@@ -203,8 +201,8 @@ auto read_y_then_x() noexcept
 // synchronizes-with relationships. Operations on the same variable within a single thread
 // still obey happens-before relationships, but there’s almost no requirement on order-
 // ing relative to other threads. The only requirement is that accesses to a single atomic
-// variable from the same thread can’t be reordered; once a given thread has seen a par-
-// ticular value of an atomic variable, a subsequent read by that thread can’t retrieve
+// variable from the same thread can’t be reordered; once a given thread has seen a particular
+// value of an atomic variable, a subsequent read by that thread can’t retrieve
 // an earlier value of the variable.
 
 // Relaxed operations have few ordering requirements
@@ -304,7 +302,7 @@ auto print(const gsl::span<read_values>& v)
 // that reads the value written. This means that different threads can still see different
 // orderings, but these orderings are restricted. 
 
-// Acquire-release doesn’t imply a total ordering
+// Acquire-release doesn't imply a total ordering
 std::atomic<bool> x_3, y_3;
 std::atomic<int> z_3;
 
@@ -436,25 +434,25 @@ auto thread_3_1() noexcept
 
 // The concept of a data dependency is relatively straightforward: there is a data
 // dependency between two operations if the second one operates on the result of the
-// first. There are two new relations that deal with data dependencies: dependency-orderedbefore
+// first. There are two new relations that deal with data dependencies: dependency-ordered-before
 // and carries-a-dependency-to.
 // memory_order_consume - use when the atomic operation
 // loads a pointer to some data
 
 // Using std::memory_order_consume to synchronize data
-struct X
+struct x_mem
 {
     int i = 0;
     std::string s;
 };
 
-std::atomic<X*> p_x;
-std::atomic<std::shared_ptr<X>> v;
+std::atomic<x_mem*> p_x;
+std::atomic<std::shared_ptr<x_mem>> v;
 std::atomic<int> a;
 
 auto create_x()
 {
-    auto ptr = std::shared_ptr<X>();
+    auto ptr = std::shared_ptr<x_mem>();
     ptr->i = 42;
     ptr->s = "hello";
 
@@ -464,7 +462,7 @@ auto create_x()
 
 auto create_x_raw_ptr()
 {
-    auto* ptr = new X;
+    auto* ptr = new x_mem;
     ptr->i = 42;
     ptr->s = "hello";
 
@@ -474,7 +472,7 @@ auto create_x_raw_ptr()
 
 auto use_x()
 {
-    auto ptr = std::make_shared<X>();
+    auto ptr = std::make_shared<x_mem>();
     while (!((ptr = v.load(std::memory_order_consume))))
     {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
@@ -574,7 +572,7 @@ auto read_y_then_x_5() noexcept
 //
 // These two operations are no longer separated by the fence and so are no longer
 // ordered. It’s only when the fence comes between the store to x and the store to y that
-// it imposes an ordering. The presence or absence of a fence doesn’t affect any
+// it imposes an ordering. The presence or absence of a fence doesn't affect any
 // enforced orderings on happens-before relationships that exist because of other
 // atomic operations.
 

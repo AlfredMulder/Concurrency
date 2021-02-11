@@ -77,7 +77,7 @@ int main()
     {
         threads.emplace_back([&counter]()
         {
-            for (auto i = 0; i < 100; ++i)
+            for (auto j = 0; j < 100; ++j)
             {
                 ++counter;
                 --counter;
@@ -101,7 +101,7 @@ int main()
     {
         threads.emplace_back([&counter1]()
         {
-            for (auto i = 0; i < 100; ++i)
+            for (auto j = 0; j < 100; ++j)
             {
                 counter1.fetch_add(1);
             }
@@ -148,15 +148,15 @@ int main()
     // is an execution policy type used as a unique type to disambiguate parallel algorithm overloading and
     // require that a parallel algorithm’s execution
     // not be
-    // parallelized.
+    // paralleled.
     //
     // - parallel_policy - It
     // is an execution policy type used as a unique type to disambiguate parallel algorithm overloading and indicate
-    // that a parallel algorithm’s execution may be parallelized.
+    // that a parallel algorithm’s execution may be paralleled.
     //
     // -parallel_unsequenced_policy - It
     // is an execution policy type used as a unique type to disambiguate parallel algorithm overloading and
-    // indicate that a parallel algorithm’s execution may be parallelized and vectorised.
+    // indicate that a parallel algorithm’s execution may be paralleled and vectorized.
     std::vector<int> vec2(1000);
     std::iota(vec2.begin(), vec2.end(), 0);
     std::vector<int> output;

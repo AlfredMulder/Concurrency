@@ -15,6 +15,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lambdas_with_threads", "lam
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "loopers_dispatchers", "loopers_dispatchers\loopers_dispatchers.vcxproj", "{4C0605E5-CB97-406B-842D-D0A33B9BBF1F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "async_with_thread", "async_with_thread\async_with_thread.vcxproj", "{D4B4896C-FA2A-4230-9498-ABCE8B87CE4C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -71,6 +73,14 @@ Global
 		{4C0605E5-CB97-406B-842D-D0A33B9BBF1F}.Release|x64.Build.0 = Release|x64
 		{4C0605E5-CB97-406B-842D-D0A33B9BBF1F}.Release|x86.ActiveCfg = Release|Win32
 		{4C0605E5-CB97-406B-842D-D0A33B9BBF1F}.Release|x86.Build.0 = Release|Win32
+		{D4B4896C-FA2A-4230-9498-ABCE8B87CE4C}.Debug|x64.ActiveCfg = Debug|x64
+		{D4B4896C-FA2A-4230-9498-ABCE8B87CE4C}.Debug|x64.Build.0 = Debug|x64
+		{D4B4896C-FA2A-4230-9498-ABCE8B87CE4C}.Debug|x86.ActiveCfg = Debug|Win32
+		{D4B4896C-FA2A-4230-9498-ABCE8B87CE4C}.Debug|x86.Build.0 = Debug|Win32
+		{D4B4896C-FA2A-4230-9498-ABCE8B87CE4C}.Release|x64.ActiveCfg = Release|x64
+		{D4B4896C-FA2A-4230-9498-ABCE8B87CE4C}.Release|x64.Build.0 = Release|x64
+		{D4B4896C-FA2A-4230-9498-ABCE8B87CE4C}.Release|x86.ActiveCfg = Release|Win32
+		{D4B4896C-FA2A-4230-9498-ABCE8B87CE4C}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

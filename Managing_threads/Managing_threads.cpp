@@ -57,11 +57,36 @@ void f()
 // Using RAII to wait for a thread to complete
 class thread_guard
 {
-    std::thread& t_;
 public:
-    constexpr explicit thread_guard(std::thread& t): t_(t)
+    thread_guard(thread_guard&& other) noexcept
+        : t_(other.t_),
+          thread_gua_(std::move(other.thread_gua_))
     {
     }
+
+    thread_guard& operator=(const thread_guard& other)
+    {
+        using std::swap;
+        swap(*this, other.thread_gua_);
+        return *this;
+    }
+
+    thread_guard& operator=(thread_guard&& other) noexcept
+    {
+        if (other.t_.joinable())
+        {
+            other.t_.join();
+        }
+        t_ = std::move(other.t_);
+        return *this;
+    }
+
+private:
+    std::thread& t_;
+    thread_guard&& thread_gua_;
+
+public:
+    thread_guard() = delete;
 
     ~thread_guard()
     {
@@ -71,7 +96,9 @@ public:
         }
     }
 
-    auto operator<=>(const thread_guard&) const = delete;
+    auto operator<=>(const thread_guard&) const
+    {
+    }
 };
 
 struct func;
@@ -81,7 +108,7 @@ void f_1()
     auto some_local_state = 0;
     func my_func(some_local_state);
     std::thread t(my_func);
-    thread_guard g(t);
+    // thread_guard g(t);
     // do_something_in_current_thread();
 }
 
@@ -108,7 +135,6 @@ void f_1()
 // scoped_thread and example usage
 class scoped_thread
 {
-    std::thread t_;
 public:
     explicit scoped_thread(std::thread t):
         t_(std::move(t))
@@ -119,13 +145,43 @@ public:
         }
     }
 
+    scoped_thread& operator=(scoped_thread other)
+    {
+        if (other.t_.joinable())
+        {
+            other.t_.join();
+        }
+        t_ = std::move(other.t_);
+        return *this;
+    }
+
+    scoped_thread& operator=(scoped_thread&& other) noexcept
+    {
+        if (other.t_.joinable())
+        {
+            other.t_.join();
+        }
+        t_ = std::move(other.t_);
+        return *this;
+    }
+
+private:
+    std::thread t_;
+public:
+
+
     ~scoped_thread()
     {
         t_.join();
     }
 
-    scoped_thread(scoped_thread const&) = delete;
-    auto operator<=>(scoped_thread const&) = delete;
+    scoped_thread(scoped_thread const&)
+    {
+    }
+
+    auto operator<=>(scoped_thread const&) const
+    {
+    }
 };
 
 struct func;
@@ -164,6 +220,19 @@ public:
     {
     }
 
+    joining_thread()
+    = default;
+
+    joining_thread& operator=(joining_thread other) noexcept
+    {
+        if (joinable())
+        {
+            join();
+        }
+        t_ = std::move(other.t_);
+        return *this;
+    }
+
     joining_thread& operator=(joining_thread&& other) noexcept
     {
         if (joinable())
@@ -187,7 +256,9 @@ public:
     ~joining_thread() noexcept
     {
         if (joinable())
+        {
             join();
+        }
     }
 
     void swap(joining_thread& other) noexcept
@@ -230,9 +301,9 @@ public:
 };
 
 // Spawns some threads and waits for them to finish
-void do_work(unsigned id)
+void do_work(const unsigned id)
 {
-    id = 0u;
+    // id = 0u;
     std::cout << id << '\n';
 };
 

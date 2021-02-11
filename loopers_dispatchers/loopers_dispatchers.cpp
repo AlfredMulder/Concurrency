@@ -12,7 +12,7 @@
 //
 // There will at least be a stack allocated for the thread. There is the management of all threads to be done
 // with respect to the governing process in kernel space and the operating system implementation. Also, when having a
-// large number of threads, scaleability, will almost certainly become a critical factor, regarding the huge amount of
+// large number of threads, scalability, will almost certainly become a critical factor, regarding the huge amount of
 // permutations of target systems.
 //
 // And even worse, the specific expression of a thread is dependent on the operation system and the threading library
@@ -43,7 +43,28 @@
 
 class clooper
 {
-public: // Ctor/Dtor
+public:
+    clooper& operator=(clooper other)
+    {
+        using std::swap;
+        swap(*this, other);
+        return *this;
+    }
+
+    // Ctor/Dtor
+
+    clooper(clooper&& other) noexcept
+        : m_thread_(std::move(other.m_thread_)),
+          m_runnables_(std::move(other.m_runnables_)),
+          m_dispatcher_(std::move(other.m_dispatcher_))
+    {
+    }
+
+    clooper(const clooper& other)
+        : m_runnables_(other.m_runnables_),
+          m_dispatcher_(other.m_dispatcher_)
+    {
+    }
 
     using runnable = std::function<void()>;
 
@@ -77,8 +98,8 @@ public: // Ctor/Dtor
     clooper()
         : m_running_(false)
           , m_abort_requested_(false)
-          , m_runnables_mutex_()
-          , m_runnables_()
+          // , m_runnables_mutex_()
+          // , m_runnables_()
           , m_dispatcher_(std::make_shared<c_dispatcher>(c_dispatcher(*this)))
     {
     } // Copy defined, Move to be implemented
@@ -170,7 +191,7 @@ private: // Methods
 
     runnable next()
     {
-        std::lock_guard guard{m_runnables_mutex_}; // CTAD, C++17 with {} braces
+        std::lock_guard<std::recursive_mutex> guard{m_runnables_mutex_}; // CTAD, C++17 with {} braces
 
         if (m_runnables_.empty())
         {
@@ -194,7 +215,7 @@ private: // Methods
 
         try
         {
-            std::lock_guard guard{m_runnables_mutex_};
+            std::lock_guard<std::recursive_mutex> guard{m_runnables_mutex_};
 
             m_runnables_.push(std::move(runnable));
         }
@@ -221,17 +242,18 @@ private: // Members
 };
 
 // !!!
-// The looper is just a control-construct attached to a single worker-thread and can not handle parallelized execution
+// The looper is just a control-construct attached to a single worker-thread and can not handle paralleled execution
 // or workload balancing, which Thread-Pools with work-stealing are perfect for.
 //
 // But, if there’s a single worker thread required for a specific type of tasks, the Looper can be a more simple and
-// more comprehensible approach to solve the multithreading issue!
+// more comprehensible approach to solve the multi-threading issue!
 
 int main(int argc, char* argv[])
 {
     auto looper = std::make_unique<clooper>();
 
     std::cout << "Starting looper" << std::endl;
+
     // To start and run
     looper->run();
 

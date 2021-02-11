@@ -76,40 +76,96 @@ template <typename T, typename Container=std::deque<T>>
 class stack
 {
 public:
-    explicit stack(const Container&);
-    explicit stack(Container&& = Container());
+    explicit stack(const Container&)
+    {
+    }
+
+    explicit stack(Container&& = Container())
+    {
+    }
+
     template <class Alloc>
-    explicit stack(const Alloc&);
+    explicit stack(const Alloc&)
+    {
+    }
+
     template <class Alloc>
-    stack(const Container&, const Alloc&);
+    stack(const Container&, const Alloc&)
+    {
+    }
+
     template <class Alloc>
-    stack(Container&&, const Alloc&);
+    stack(Container&&, const Alloc&)
+    {
+    }
+
     template <class Alloc>
-    stack(stack&&, const Alloc&);
-    bool empty() const;
-    size_t size() const;
-    T& top();
-    T const& top() const;
-    void push(T const&);
-    void push(T&&);
-    void pop();
-    void swap(stack&&);
+    stack(stack&&, const Alloc&)
+    {
+    }
+
+    [[nodiscard]] static bool empty() { return false; }
+    static size_t size() { return 0; }
+    T& top() { return {}; }
+    T const& top() const { return {}; }
+
+    static void push(T const&)
+    {
+    }
+
+    static void push(T&&)
+    {
+    }
+
+    static void pop()
+    {
+    }
+
+    static void swap(stack&&)
+    {
+    }
 
     template <class... Args>
-    void emplace(Args&&... args);
+    static void emplace(Args&&... args)
+    {
+    }
 };
 
 // A fleshed-out class definition for a thread-safe stack
 struct empty_stack final : std::exception
 {
-    const char* what() const throw() override;
+    [[nodiscard]] const char* what() const noexcept(true) override;
 };
 
 template <typename T>
 class thread_safe_stack
 {
+public:
+    thread_safe_stack(thread_safe_stack&& other) noexcept
+        : data_(std::move(other.data_)),
+          m_(std::move(other.m_))
+    {
+    }
+
+    thread_safe_stack& operator=(thread_safe_stack other)
+    {
+        using std::swap;
+        swap(*this, other);
+        return *this;
+    }
+
+    thread_safe_stack& operator=(thread_safe_stack&& other) noexcept
+    {
+        using std::swap;
+        swap(*this, other);
+        return *this;
+    }
+
+private:
     std::stack<T> data_;
     mutable std::mutex m_;
+    thread_safe_stack self_;
+
 public:
     thread_safe_stack()
     {
@@ -121,7 +177,10 @@ public:
         data_ = other.data_;
     }
 
-    thread_safe_stack& operator=(const thread_safe_stack&) = delete;
+    thread_safe_stack& operator=(const thread_safe_stack&)
+    {
+        return {};
+    }
 
     void push(T new_value)
     {
@@ -151,9 +210,13 @@ public:
         std::lock_guard<std::mutex> lock(m_);
         return data_.empty();
     }
+
+    ~thread_safe_stack()
+    {
+    }
 };
 
-// Using std::lock() and std::lock_guard in a swap operation to awoid DEADLOCK
+// Using std::lock() and std::lock_guard in a swap operation to avoid DEADLOCK
 class some_big_object
 {
 };
@@ -192,10 +255,10 @@ public:
 };
 
 // Further guidelines for avoiding deadlock
-// Deadlock doesn’t only occur with locks, although that’s the most frequent cause; you
+// Deadlock doesn't only occur with locks, although that’s the most frequent cause; you
 // can create deadlock with two threads and no locks by having each thread call join()
-// on the std::thread object for the other. In this case, neither thread can make prog-
-// ress because it’s waiting for the other to finish, like the children fighting over their toy.
+// on the std::thread object for the other. In this case, neither thread can make progress
+// because it’s waiting for the other to finish, like the children fighting over their toy.
 // This simple cycle can occur anywhere that a thread can wait for another thread to per-
 // form some action if the other thread can simultaneously be waiting for the first
 // thread, and it isn’t limited to two threads: a cycle of three or more threads will still
@@ -231,10 +294,10 @@ public:
 // user of the stack, but it’s rather uncommon for the data stored in a container to access
 // that container, and it’s quite apparent when this is happening, so it’s not a particularly
 // difficult burden to carry.
-// In other cases, this isn’t so straightforward, as you discovered with the swap opera-
-// tion in section 3.2.4. At least in that case you could lock the mutexes simultaneously,
-// but that’s not always possible. If you look back at the linked list example from sec-
-// tion 3.1, you’ll see that one possibility for protecting the list is to have a mutex per
+// In other cases, this isn’t so straightforward, as you discovered with the swap operation
+// in section 3.2.4. At least in that case you could lock the mutexes simultaneously,
+// but that’s not always possible. If you look back at the linked list example from section 3.1,
+// you’ll see that one possibility for protecting the list is to have a mutex per
 // node. Then, in order to access the list, threads must acquire a lock on every node
 // they’re interested in. For a thread to delete an item, it must then acquire the lock on
 // three nodes: the node being deleted and the nodes on either side, because they’re all
@@ -243,8 +306,8 @@ public:
 // sequence, in order to ensure that the next pointer isn’t modified in the meantime.
 // Once the lock on the next node has been acquired, the lock on the first can be
 // released because it’s no longer necessary.
-// This hand-over-hand locking style allows multiple threads to access the list, pro-
-// vided each is accessing a different node. But in order to prevent deadlock, the
+// This hand-over-hand locking style allows multiple threads to access the list, provided
+// each is accessing a different node. But in order to prevent deadlock, the
 // nodes must always be locked in the same order: if two threads tried to traverse the
 // list in opposite orders using hand-over-hand locking, they could deadlock with
 // each other in the middle of the list. If nodes A and B are adjacent in the list, the
@@ -255,12 +318,12 @@ public:
 // Likewise, when deleting node B that lies between nodes A and C, if that thread
 // acquires the lock on B before the locks on A and C, it has the potential to deadlock
 // with a thread traversing the list. Such a thread would try to lock either A or C first
-// (depending on the direction of traversal) but would then find that it couldn’t obtain a
+// (depending on the direction of traversal) but would then find that it couldn't obtain a
 // lock on B because the thread doing the deleting was holding the lock on B and trying
 // to acquire the locks on A and C.
 // USE A LOCK HIERARCHY
-// Although this is a particular case of defining lock ordering, a lock hierarchy can pro-
-// vide a means of checking that the convention is adhered to at runtime. The idea is that
+// Although this is a particular case of defining lock ordering, a lock hierarchy can provide
+// a means of checking that the convention is adhered to at runtime. The idea is that
 // you divide your application into layers and identify all the mutexes that may be locked
 // in any given layer. When code tries to lock a mutex, it isn’t permitted to lock that mutex
 // if it already holds a lock from a lower layer. You can check this at runtime by assigning
@@ -386,19 +449,22 @@ void thread_b()
 
 // Using std::lock() and std::unique_lock in a swap operation
 class some_big_object;
-void swap(some_big_object& lhs, some_big_object& rhs) noexcept;
 
-class X
+void swap(some_big_object& lhs, some_big_object& rhs) noexcept
+{
+}
+
+class xx
 {
 private:
     some_big_object some_detail_;
     std::mutex m_;
 public:
-    explicit X(some_big_object const& sd) noexcept: some_detail_(sd)
+    explicit xx(some_big_object const& sd) noexcept: some_detail_(sd)
     {
     }
 
-    friend void swap(X& lhs, X& rhs) noexcept
+    friend void swap(xx& lhs, xx& rhs) noexcept
     {
         if (&lhs == &rhs)
         {
@@ -429,7 +495,7 @@ public:
 // In general, a lock should be held for only the mini-
 // mum possible time needed to perform the required operations. This also means that time-
 // consuming operations such as acquiring another lock (even if you know it won’t
-// deadlock) or waiting for I/O to complete shouldn’t be done while holding a lock
+// deadlock) or waiting for I/O to complete shouldn't be done while holding a lock
 // unless absolutely necessary.
 
 // Locking one mutex at a time in a comparison operator
