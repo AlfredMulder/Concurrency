@@ -13,7 +13,7 @@ struct func
 {
     int& i;
 
-    explicit func(int& i): i(i)
+    explicit func(int& i) noexcept: i(i)
     {
     }
 
@@ -64,7 +64,7 @@ public:
     {
     }
 
-    thread_guard& operator=(const thread_guard& other)
+    thread_guard& operator=(const thread_guard& other) noexcept
     {
         using std::swap;
         swap(*this, other.thread_gua_);
@@ -188,7 +188,7 @@ struct func;
 
 void f_2()
 {
-    int some_local_state;
+    auto some_local_state = 0;
     scoped_thread t{std::thread(func(some_local_state))};
     // do_something_in_current_thread();
 }
@@ -223,7 +223,7 @@ public:
     joining_thread()
     = default;
 
-    joining_thread& operator=(joining_thread other) noexcept
+    joining_thread& operator=(joining_thread other)
     {
         if (joinable())
         {
@@ -243,7 +243,7 @@ public:
         return *this;
     }
 
-    joining_thread& operator=(std::thread other) noexcept
+    joining_thread& operator=(std::thread other)
     {
         if (joinable())
         {
@@ -253,7 +253,7 @@ public:
         return *this;
     }
 
-    ~joining_thread() noexcept
+    ~joining_thread()
     {
         if (joinable())
         {
@@ -327,8 +327,12 @@ T parallel_accumulate(Iterator first, Iterator last, T init)
     }
     auto const min_per_thread = 25;
     auto const max_threads = (length + min_per_thread - 1) / min_per_thread;
-    auto const hardware_threads = gsl::narrow_cast<int>(std::thread::hardware_concurrency());
-    auto const num_threads = std::min(hardware_threads != 0 ? hardware_threads : 2, max_threads);
+    auto const hardware_threads = gsl::narrow_cast<int>(
+        std::thread::hardware_concurrency());
+        
+    auto const num_threads = std::min(
+        hardware_threads != 0 ? hardware_threads : 2, max_threads);
+        
     auto const block_size = length / num_threads;
     std::vector<T> results(num_threads);
     std::vector<std::thread> threads(num_threads - 1);

@@ -162,7 +162,7 @@ private: // Methods
                     std::this_thread::sleep_for(1ms);
                 }
             }
-            catch (std::runtime_error& e)
+            catch (const std::runtime_error& e)
             {
                 // Some more specific
                 std::cerr << e.what() << std::endl;
@@ -191,14 +191,14 @@ private: // Methods
 
     runnable next()
     {
-        std::lock_guard<std::recursive_mutex> guard{m_runnables_mutex_}; // CTAD, C++17 with {} braces
+        std::lock_guard guard{m_runnables_mutex_}; // CTAD, C++17 with {} braces
 
         if (m_runnables_.empty())
         {
             return nullptr;
         }
 
-        auto runnable = m_runnables_.front();
+        auto& runnable = m_runnables_.front();
         m_runnables_.pop();
 
         return runnable;
@@ -215,7 +215,7 @@ private: // Methods
 
         try
         {
-            std::lock_guard<std::recursive_mutex> guard{m_runnables_mutex_};
+            std::lock_guard guard{m_runnables_mutex_};
 
             m_runnables_.push(std::move(runnable));
         }
@@ -272,7 +272,8 @@ int main(int argc, char* argv[])
                 << " times." << std::endl;
         };
 
-        dispatcher->post(std::move(task));
+        //dispatcher->post(std::move(task));
+        dispatcher->post(task);
     }
 
     std::cout << "Waiting 5 seconds for completion" << std::endl;

@@ -15,14 +15,14 @@ std::mutex some_mutex;
 
 void add_to_list(const int new_value)
 {
-    std::lock_guard<std::mutex> guard(some_mutex);
+    std::lock_guard guard(some_mutex);
     // std::scoped_lock guard(some_mutex);
     some_list.push_back(new_value);
 }
 
 bool list_contains(const int value_to_find)
 {
-    std::lock_guard<std::mutex> guard(some_mutex);
+    std::lock_guard guard(some_mutex);
     // std::scoped_lock guard(some_mutex);
     return std::ranges::find(some_list, value_to_find)
         != some_list.end();
@@ -47,7 +47,7 @@ public:
     template <typename Function>
     void process_data(Function func)
     {
-        std::lock_guard<std::mutex> l(m_);
+        std::lock_guard l(m_);
         func(data_);
     }
 };
@@ -167,9 +167,7 @@ private:
     thread_safe_stack self_;
 
 public:
-    thread_safe_stack()
-    {
-    }
+    thread_safe_stack() = default;
 
     thread_safe_stack(const thread_safe_stack& other)
     {
@@ -184,13 +182,13 @@ public:
 
     void push(T new_value)
     {
-        std::lock_guard<std::mutex> lock(m_);
+        std::lock_guard lock(m_);
         data_.push(std::move(new_value));
     }
 
     std::shared_ptr<T> pop()
     {
-        std::lock_guard<std::mutex> lock(m_);
+        std::lock_guard lock(m_);
         if (data_.empty()) throw empty_stack();
         std::shared_ptr<T> const res(std::make_shared<T>(data_.top()));
         data_.pop();
@@ -199,7 +197,7 @@ public:
 
     void pop(T& value)
     {
-        std::lock_guard<std::mutex> lock(m_);
+        std::lock_guard lock(m_);
         if (data_.empty()) throw empty_stack();
         value = data_.top();
         data_.pop();
@@ -207,13 +205,11 @@ public:
 
     bool empty() const
     {
-        std::lock_guard<std::mutex> lock(m_);
+        std::lock_guard lock(m_);
         return data_.empty();
     }
 
-    ~thread_safe_stack()
-    {
-    }
+    ~thread_safe_stack() = default;
 };
 
 // Using std::lock() and std::lock_guard in a swap operation to avoid DEADLOCK
@@ -240,8 +236,8 @@ public:
             return;
         }
         std::lock(lhs.m_, rhs.m_);
-        std::lock_guard<std::mutex> lock_a(lhs.m_, std::adopt_lock);
-        std::lock_guard<std::mutex> lock_b(rhs.m_, std::adopt_lock);
+        std::lock_guard lock_a(lhs.m_, std::adopt_lock);
+        std::lock_guard lock_b(rhs.m_, std::adopt_lock);
         swap(lhs.some_detail_, rhs.some_detail_);
     }
 
@@ -404,7 +400,7 @@ int do_low_level_stuff()
 
 int low_level_func()
 {
-    std::lock_guard<hierarchical_mutex> lk(low_level_mutex);
+    std::lock_guard lk(low_level_mutex);
     return do_low_level_stuff();
 }
 
@@ -415,7 +411,7 @@ void high_level_stuff(const int some_param)
 
 void high_level_func()
 {
-    std::lock_guard<hierarchical_mutex> lk(high_level_mutex);
+    std::lock_guard lk(high_level_mutex);
     high_level_stuff(low_level_func());
 }
 
@@ -436,7 +432,7 @@ void other_stuff()
 
 void thread_b()
 {
-    std::lock_guard<hierarchical_mutex> lk(other_mutex);
+    std::lock_guard lk(other_mutex);
     other_stuff();
 }
 
@@ -470,8 +466,8 @@ public:
         {
             return;
         }
-        std::unique_lock<std::mutex> lock_a(lhs.m_, std::defer_lock);
-        std::unique_lock<std::mutex> lock_b(rhs.m_, std::defer_lock);
+        std::unique_lock lock_a(lhs.m_, std::defer_lock);
+        std::unique_lock lock_b(rhs.m_, std::defer_lock);
         std::lock(lock_a, lock_b);
         swap(lhs.some_detail_, rhs.some_detail_);
     }
@@ -506,7 +502,7 @@ class y
 
     int get_detail() const
     {
-        std::lock_guard<std::mutex> lock_a(m_);
+        std::lock_guard lock_a(m_);
         return some_detail_;
     }
 
@@ -533,7 +529,7 @@ std::mutex resource_mutex;
 
 void foo_1()
 {
-    std::unique_lock<std::mutex> lk(resource_mutex);
+    std::unique_lock lk(resource_mutex);
     if (!resource_ptr)
     {
         resource_ptr.reset();
@@ -546,7 +542,7 @@ void undefined_behaviour_with_double_checked_locking()
 {
     if (!resource_ptr)
     {
-        std::lock_guard<std::mutex> lk(resource_mutex);
+        std::lock_guard lk(resource_mutex);
         if (!resource_ptr)
         {
             resource_ptr.reset();
@@ -620,7 +616,7 @@ class dns_cache
 public:
     dns_entry find_entry(std::string const& domain) const
     {
-        std::shared_lock<std::shared_mutex> lk(entry_mutex_);
+        std::shared_lock lk(entry_mutex_);
         auto const it =
             entries_.find(domain);
         return (it == entries_.end()) ? dns_entry() : it->second;
@@ -629,7 +625,7 @@ public:
     void update_or_add_entry(std::string const& domain,
                              dns_entry const& dns_details)
     {
-        std::lock_guard<std::shared_mutex> lk(entry_mutex_);
+        std::lock_guard lk(entry_mutex_);
         entries_[domain] = dns_details;
     }
 };

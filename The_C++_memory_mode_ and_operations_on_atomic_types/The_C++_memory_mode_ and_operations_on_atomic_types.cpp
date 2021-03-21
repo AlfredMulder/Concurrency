@@ -1,11 +1,13 @@
 #include <cassert>
 #include <chrono>
+#include <condition_variable>
 #include <iostream>
-#include <vector>
+#include <random>
 #include <thread>
+#include <vector>
 #include <gsl/pointers>
 #include <gsl/span>
-#include <ranges>
+#include <mutex>
 
 // You can also avoid the undefined behavior by using atomic operations to access the memory location involved
 // in the race. This doesn't prevent the race itself—which of the atomic operations
@@ -123,8 +125,8 @@ auto update_global_data()
 }
 
 // Reading and writing variables from different threads
-static std::vector<int> data{0,};
-std::atomic<bool> data_ready(false);
+static std::vector data{0,};
+std::atomic data_ready(false);
 
 auto reader_thread()
 {
@@ -175,21 +177,23 @@ auto write_y() noexcept
 
 auto read_x_then_y() noexcept
 {
-    while (!x.load(std::memory_order_seq_cst));
-
-    if (y.load(std::memory_order_seq_cst))
+    while (!x.load(std::memory_order_seq_cst))
     {
-        ++z;
+        if (y.load(std::memory_order_seq_cst))
+        {
+            ++z;
+        }
     }
 }
 
 auto read_y_then_x() noexcept
 {
-    while (!y.load(std::memory_order_seq_cst));
-
-    if (x.load(std::memory_order_seq_cst))
+    while (!y.load(std::memory_order_seq_cst))
     {
-        ++z;
+        if (x.load(std::memory_order_seq_cst))
+        {
+            ++z;
+        }
     }
 }
 
@@ -217,17 +221,18 @@ auto write_x_then_y() noexcept
 
 auto read_y_then_x_1() noexcept
 {
-    while (!y_1.load(std::memory_order_relaxed));
-
-    if (x_1.load(std::memory_order_relaxed))
+    while (!y_1.load(std::memory_order_relaxed))
     {
-        ++z_1;
+        if (x_1.load(std::memory_order_relaxed))
+        {
+            ++z_1;
+        }
     }
 }
 
 // Relaxed operations on multiple threads
 std::atomic<int> x_2(0), y_2(0), z_2(0);
-std::atomic<bool> go(false);
+std::atomic go(false);
 unsigned constexpr loop_count = 10;
 
 struct read_values
@@ -241,7 +246,8 @@ read_values values3[loop_count];
 read_values values4[loop_count];
 read_values values5[loop_count];
 
-auto increment(const gsl::not_null<std::atomic<int>*>& var_to_inc, const gsl::span<read_values>& values) noexcept
+auto increment(const gsl::not_null<std::atomic<int>*>& var_to_inc,
+               const gsl::span<read_values>& values) noexcept
 {
     while (!go)
     {
@@ -287,7 +293,8 @@ auto print(const gsl::span<read_values>& v)
             std::cout << ",";
         }
         // std::cout << "(" << v[i].x_2 << "," << v[i].y_2 << "," << v[i].z_2 << ")";
-        std::cout << "(" << v.data()->x_2 << "," << v.data()->y_2 << "," << v.data()->z_2 << ")";
+        std::cout << "(" << v.data()->x_2 << "," << v.data()->y_2 << "," << v.
+            data()->z_2 << ")";
     }
     std::cout << std::endl;
 }
@@ -318,19 +325,23 @@ auto write_y_ar() noexcept
 
 auto read_x_then_y_ar() noexcept
 {
-    while (!x_3.load(std::memory_order_acquire));
-    if (y_3.load(std::memory_order_acquire))
+    while (!x_3.load(std::memory_order_acquire))
     {
-        ++z_3;
+        if (y_3.load(std::memory_order_acquire))
+        {
+            ++z_3;
+        }
     }
 }
 
 auto read_y_then_x_ar() noexcept
 {
-    while (!y_3.load(std::memory_order_acquire));
-    if (x_3.load(std::memory_order_acquire))
+    while (!y_3.load(std::memory_order_acquire))
     {
-        ++z_3;
+        if (x_3.load(std::memory_order_acquire))
+        {
+            ++z_3;
+        }
     }
 }
 
@@ -346,10 +357,12 @@ auto write_x_then_y_a() noexcept
 
 auto read_y_then_x_a() noexcept
 {
-    while (!y_4.load(std::memory_order_acquire));
-    if (x_4.load(std::memory_order_relaxed))
+    while (!y_4.load(std::memory_order_acquire))
     {
-        ++z_4;
+        if (x_4.load(std::memory_order_relaxed))
+        {
+            ++z_4;
+        }
     }
 }
 
@@ -386,22 +399,26 @@ auto thread_1() noexcept
 
 auto thread_2() noexcept
 {
-    while (!sync1.load(std::memory_order_acquire));
-    sync2.store(true, std::memory_order_release);
+    while (!sync1.load(std::memory_order_acquire))
+    {
+        sync2.store(true, std::memory_order_release);
+    }
 }
 
 auto thread_3() noexcept
 {
-    while (!sync2.load(std::memory_order_acquire));
-    assert(data_1[0].load(std::memory_order_relaxed)==42);
-    assert(data_1[1].load(std::memory_order_relaxed)==97);
-    assert(data_1[2].load(std::memory_order_relaxed)==17);
-    assert(data_1[3].load(std::memory_order_relaxed)==-141);
-    assert(data_1[4].load(std::memory_order_relaxed)==2003);
+    while (!sync2.load(std::memory_order_acquire))
+    {
+        assert(data_1[0].load(std::memory_order_relaxed)==42);
+        assert(data_1[1].load(std::memory_order_relaxed)==97);
+        assert(data_1[2].load(std::memory_order_relaxed)==17);
+        assert(data_1[3].load(std::memory_order_relaxed)==-141);
+        assert(data_1[4].load(std::memory_order_relaxed)==2003);
+    }
 }
 
 // combine sync1 and sync2 in sync to use memory_order_acq_rel
-std::atomic<bool> sync(false);
+std::atomic sync(false);
 
 auto thread_1_1() noexcept
 {
@@ -416,7 +433,8 @@ auto thread_1_1() noexcept
 auto thread_2_1() noexcept
 {
     auto expected = true;
-    while (!sync.compare_exchange_strong(expected, true, std::memory_order_acq_rel))
+    while (!sync.compare_exchange_strong(expected, true,
+                                         std::memory_order_acq_rel))
     {
         expected = true;
     }
@@ -424,12 +442,14 @@ auto thread_2_1() noexcept
 
 auto thread_3_1() noexcept
 {
-    while (sync.load(std::memory_order_acquire) < 2);
-    assert(data_1[0].load(std::memory_order_relaxed)==42);
-    assert(data_1[1].load(std::memory_order_relaxed)==97);
-    assert(data_1[2].load(std::memory_order_relaxed)==17);
-    assert(data_1[3].load(std::memory_order_relaxed)==-141);
-    assert(data_1[4].load(std::memory_order_relaxed)==2003);
+    while (sync.load(std::memory_order_acquire) < 2)
+    {
+        assert(data_1[0].load(std::memory_order_relaxed)==42);
+        assert(data_1[1].load(std::memory_order_relaxed)==97);
+        assert(data_1[2].load(std::memory_order_relaxed)==17);
+        assert(data_1[3].load(std::memory_order_relaxed)==-141);
+        assert(data_1[4].load(std::memory_order_relaxed)==2003);
+    }
 }
 
 // The concept of a data dependency is relatively straightforward: there is a data
@@ -505,14 +525,15 @@ auto populate_queue()
         queue_data.emplace_back(i);
     }
     count.store(number_of_items, std::memory_order_release);
+    std::acoshl(12.90);
 }
 
 auto consume_queue_items() noexcept
 {
     while (true)
     {
-        auto item_index = 0;
-        if ((item_index = count.fetch_sub(1, std::memory_order_acquire) <= 0))
+        if (auto item_index = 0; (item_index = count.fetch_sub(
+            1, std::memory_order_acquire) <= 0))
         {
         }
         // process(queue_data[item_index-1]);
@@ -550,11 +571,13 @@ auto write_x_then_y_5() noexcept
 
 auto read_y_then_x_5() noexcept
 {
-    while (!y_5.load(std::memory_order_relaxed));
-    std::atomic_thread_fence(std::memory_order_acquire);
-    if (x_5.load(std::memory_order_relaxed))
+    while (!y_5.load(std::memory_order_relaxed))
     {
-        ++z_5;
+        std::atomic_thread_fence(std::memory_order_acquire);
+        if (x_5.load(std::memory_order_relaxed))
+        {
+            ++z_5;
+        }
     }
 }
 
@@ -590,10 +613,14 @@ auto write_x_then_y_6() noexcept
 
 auto read_y_then_x_6() noexcept
 {
-    while (!y_6.load(std::memory_order_relaxed));
-    std::atomic_thread_fence(std::memory_order_acquire);
-    if (x_6)
-        ++z_6;
+    while (!y_6.load(std::memory_order_relaxed))
+    {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        if (x_6)
+        {
+            ++z_6;
+        }
+    }
 }
 
 // lock() is an acquire operation on an internal memory
@@ -701,12 +728,122 @@ auto read_y_then_x_6() noexcept
 // optimizations over busy-wait loops, and all the synchronization is provided by
 // the operations on the associated mutex.
 
+// Using atomic_ref
+struct expensive_to_copy
+{
+    int counter{};
+    // if std::atomic<int> counter{} - each access is sync which is not free 
+};
+
+int get_random(const int begin, const int end)
+{
+    // (6)
+
+    std::random_device seed; // initial seed
+    std::mt19937 engine(seed()); // generator
+    const std::uniform_int_distribution uniform_dist(begin, end);
+
+    return uniform_dist(engine);
+}
+
+void counting(expensive_to_copy& exp)
+{
+    std::vector<std::thread> ver;
+    // std::vector<std::jthread> v; - if using like that - no need in for loop with .join
+    // std::atomic counter{exp.counter}; // creates copy, so the counter is 0
+    std::atomic_ref counter{exp.counter};
+    // alows us to change value by reference from
+    //outer scope
+
+    ver.reserve(10);
+    for (auto n = 0; n < 10; ++n)
+    {
+        ver.emplace_back([&counter]
+        {
+            const auto random_number = get_random(100, 200);
+            for (auto i = 0; i < random_number; ++i)
+            {
+                ++counter;
+            }
+        });
+    }
+
+    for (auto& t : ver)
+    {
+        t.join();
+    }
+}
+
+//--------------------------------------------------------------------//
+// Using atomic_flag
+std::vector<int> vec{};
+
+std::atomic_flag atomic_flag{};
+
+void prepare_work()
+{
+    vec.insert(vec.end(), {0, 1, 0, 3});
+    std::cout << "Sender: Data prepared." << std::endl;
+    atomic_flag.test_and_set(); // (1)
+    atomic_flag.notify_one();
+}
+
+void complete_work()
+{
+    std::cout << "Worker: Waiting for data." << std::endl;
+    atomic_flag.wait(false); // (2)
+    vec[2] = 2;
+    std::cout << "Waiter: Complete the work." << std::endl;
+    for (auto i : vec) std::cout << i << " ";
+    std::cout << std::endl;
+}
+
+//--------------------------------------------------------------------//
+// Using cond_var with jthread
+using namespace std::literals;
+
+std::mutex mutex;
+std::condition_variable_any cond_var;
+
+bool dataReady;
+
+void receiver(const std::stop_token& stop_token)
+{
+    // (1)
+
+    std::cout << "Waiting" << '\n';
+
+    std::unique_lock lck(mutex);
+    if (const auto ret = cond_var.wait(lck, stop_token,
+                                       [] { return dataReady; }); ret)
+    {
+        std::cout << "Notification received: " << '\n';
+    }
+    else
+    {
+        std::cout << "Stop request received" << '\n';
+    }
+}
+
+void sender()
+{
+    // (2)
+
+    std::this_thread::sleep_for(5ms);
+    {
+        std::lock_guard lck(mutex);
+        dataReady = true;
+        std::cout << "Send notification" << '\n';
+    }
+    cond_var.notify_one(); // (3)
+}
+
 int main()
 {
     std::atomic<bool> b;
 
     [[maybe_unused]]
-        auto const xf = b.load(std::memory_order_acquire);
+        const auto xf = b.load(std::memory_order_acquire);
 
     b.store(true);
     x = b.exchange(false, std::memory_order_acq_rel);
@@ -797,4 +934,107 @@ int main()
     a_5.join();
     b_5.join();
     assert(z_5.load()!=0);
+    //--------------------------------------------------------------------//
+    std::cout << std::endl;
+
+    expensive_to_copy exp;
+    counting(exp);
+    std::cout << "exp.counter: " << exp.counter << '\n';
+
+    std::cout << std::endl;
+    //--------------------------------------------------------------------//
+    // Using jthread
+    using namespace std::literals;
+
+    auto func = [](const std::stop_token& stoken)
+    {
+        auto counter{0};
+        auto thread_id = std::this_thread::get_id();
+        std::stop_callback call_back(stoken, [&counter, thread_id]
+        {
+            std::cout << "Thread id: " << thread_id
+                << "; counter: " << counter << '\n';
+        });
+        while (counter < 10)
+        {
+            std::this_thread::sleep_for(0.2s);
+            ++counter;
+        }
+    };
+
+    std::cout << '\n';
+
+    std::vector<std::jthread> vec_threads(10);
+
+    for (auto& thr : vec_threads)
+    {
+        thr = std::jthread(func);
+    }
+
+    std::this_thread::sleep_for(1s);
+
+    for (auto& thr : vec_threads)
+    {
+        thr.request_stop();
+    }
+
+    std::cout << '\n';
+    //--------------------------------------------------------------------//
+    // Using atomic_flag
+    std::cout << std::endl;
+
+    std::jthread t13(prepare_work);
+    std::jthread t23(complete_work);
+
+    std::cout << std::endl;
+    //--------------------------------------------------------------------//
+    // Cooperative Interruption of a std::jthread
+    std::cout << '\n';
+
+    std::jthread non_interruptable([]
+    {
+        // (1)
+        auto counter{0};
+        while (counter < 10)
+        {
+            std::this_thread::sleep_for(0.2s);
+            std::cerr << "nonInterruptable: " << counter << '\n';
+            ++counter;
+        }
+    });
+
+    std::jthread interuptable([](const std::stop_token& stop_token)
+    {
+        // (2)
+        auto counter{0};
+        while (counter < 10)
+        {
+            std::this_thread::sleep_for(0.2s);
+            if (stop_token.stop_requested()) return; // (3)
+            std::cerr << "interruptable: " << counter << '\n';
+            ++counter;
+        }
+    });
+
+    std::this_thread::sleep_for(1s);
+
+    std::cerr << '\n';
+    std::cerr << "Main thread interrupts both jthreads" << '\n';
+    non_interruptable.request_stop();
+    interuptable.request_stop(); // (4)
+
+    std::cout << '\n';
+    //--------------------------------------------------------------------//
+    // Using cond_var with jthread
+    std::cout << '\n';
+
+    std::jthread t14(receiver);
+    std::jthread t24(sender);
+
+    t14.request_stop(); // (4)
+
+    t14.join();
+    t24.join();
+
+    std::cout << '\n';
 }

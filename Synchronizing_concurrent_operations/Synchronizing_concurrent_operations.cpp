@@ -1,7 +1,6 @@
 #include <condition_variable>
 #include <mutex>
 #include <algorithm>
-#include <cassert>
 #include <charconv>
 #include <chrono>
 #include <future>
@@ -11,11 +10,13 @@
 #include <queue>
 #include <string>
 #include <type_traits>
+#include <barrier>
+#include <utility>
+#include <latch>
 
 std::condition_variable cv;
 bool done;
 std::mutex m;
-
 
 // Waiting for data to process with std::condition_variable
 // std::mutex mut;
@@ -106,8 +107,7 @@ private:
 
 public:
     thread_safe_queue()
-    {
-    }
+    = default;
 
     thread_safe_queue(thread_safe_queue const& other)
     {
@@ -117,14 +117,14 @@ public:
 
     void push(T new_value)
     {
-        std::lock_guard<std::mutex> lk(mut_);
+        std::lock_guard lk(mut_);
         data_queue_.push(new_value);
         data_cond_.notify_one();
     }
 
     void wait_and_pop(T& value)
     {
-        std::unique_lock<std::mutex> lk(mut_);
+        std::unique_lock lk(mut_);
         data_cond_.wait(lk, [this]
         {
             return !data_queue_.empty();
@@ -135,7 +135,7 @@ public:
 
     std::shared_ptr<T> wait_and_pop()
     {
-        std::unique_lock<std::mutex> lk(mut_);
+        std::unique_lock lk(mut_);
         data_cond_.wait(lk, [this]
         {
             return !data_queue_.empty();
@@ -147,7 +147,7 @@ public:
 
     bool try_pop(T& value)
     {
-        std::lock_guard<std::mutex> lk(mut_);
+        std::lock_guard lk(mut_);
         if (data_queue_.empty())
         {
             return false;
@@ -159,7 +159,7 @@ public:
 
     std::shared_ptr<T> try_pop()
     {
-        std::lock_guard<std::mutex> lk(mut_);
+        std::lock_guard lk(mut_);
         if (data_queue_.empty())
         {
             return std::shared_ptr<T>();
@@ -171,19 +171,21 @@ public:
 
     bool empty() const
     {
-        std::lock_guard<std::mutex> lk(mut_);
+        std::lock_guard lk(mut_);
         return data_queue_.empty();
     }
 
     ~thread_safe_queue()
-    {
-    }
+    = default;
 };
 
 // Passing arguments to a function with std::async
 struct x_mem
 {
-    void foo(int, std::string const&);
+    static void foo(int, std::string const&)
+    {
+    }
+
     std::string bar(std::string const&);
 };
 
@@ -193,7 +195,7 @@ struct x_mem
 
 struct y
 {
-    double operator()(double);
+    double operator()(double) const { return 0; }
 };
 
 // y y_1;
@@ -215,13 +217,13 @@ public:
     move_only(move_only const&)
     = default;
 
-    move_only& operator=(move_only&&) noexcept
-    {
-    }
-
-    move_only& operator=(move_only const&)
-    {
-    }
+    // move_only& operator=(move_only&&) noexcept
+    // {
+    // }
+    //
+    // move_only& operator=(move_only const&)
+    // {
+    // }
 
     void operator()() const
     {
@@ -251,12 +253,12 @@ public:
 std::mutex m_2;
 std::deque<std::packaged_task<void()>> tasks;
 
-bool gui_shutdown_message_received()
+bool gui_shutdown_message_received() noexcept
 {
     return true;
 }
 
-void get_and_process_gui_message()
+void get_and_process_gui_message() noexcept
 {
 }
 
@@ -269,7 +271,9 @@ void gui_thread()
         {
             std::lock_guard<std::mutex> lk(m_2);
             if (tasks.empty())
+            {
                 continue;
+            }
             task = std::move(tasks.front());
             tasks.pop_front();
         }
@@ -284,7 +288,7 @@ std::future<void> post_task_for_gui_thread(Func f)
 {
     std::packaged_task<void()> task(f);
     auto res = task.get_future();
-    std::lock_guard<std::mutex> lk(m_2);
+    std::lock_guard lk(m_2);
     tasks.push_back(std::move(task));
     return res;
 }
@@ -297,13 +301,15 @@ bool wait_loop()
     while (!done)
     {
         if (cv.wait_until(lk, timeout) == std::cv_status::timeout)
+        {
             break;
+        }
     }
     return done;
 }
 
 // Saving an exception for the future
-double square_root(double x)
+double square_root(const double x)
 {
     if (x < 0)
     {
@@ -404,15 +410,18 @@ std::list<T> parallel_quick_sort(std::list<T> input)
     result.splice(result.begin(), input, input.begin());
     auto pivot = *result.begin();
     auto divide_point =
-        std::partition(input.begin(), input.end(), [&](T const& t) { return t < pivot; });
+        std::partition(input.begin(), input.end(),
+                       [&](T const& t) { return t < pivot; });
 
     std::list<T> lower_part = {};
 
     lower_part.splice(lower_part.end(), input, input.begin(), divide_point);
 
     std::future<std::list<T>> new_lower(std::async(std::launch::async,
-                                                   &parallel_quick_sort<T>, std::move(lower_part)));
-    std::future<std::list<T>> new_higher(parallel_quick_sort<T>(std::move(input)));
+                                                   &parallel_quick_sort<T>,
+                                                   std::move(lower_part)));
+    std::future<std::list<T>> new_higher(
+        parallel_quick_sort<T>(std::move(input)));
 
     result.splice(result.end(), new_higher);
     result.splice(result.begin(), new_lower.get());
@@ -831,7 +840,8 @@ std::future<std::invoke_result<Func(Arg&&)>> spawn_task(Func&& func, Arg&& arg)
 //     }
 // }
 
-std::ostream& operator<<(std::ostream& output_stream, const std::list<int>& list)
+std::ostream& operator<<(std::ostream& output_stream,
+                         const std::list<int>& list)
 {
     for (const auto& i : list)
     {
@@ -840,7 +850,7 @@ std::ostream& operator<<(std::ostream& output_stream, const std::list<int>& list
     return output_stream;
 }
 
-std::optional<std::string> create(bool i)
+std::optional<std::string> create(const bool i)
 {
     if (i)
     {
@@ -862,13 +872,99 @@ std::optional<int> convert(const std::string& arg)
     return std::nullopt;
 }
 
+//--------------------------------------------------------------------//
+// Barrier
+std::barrier work_done(6);
+std::mutex cout_mutex;
+
+void synchronized_out(const std::string& s) noexcept
+{
+    std::lock_guard lo(cout_mutex);
+    std::cout << s;
+}
+
+class full_time_worker
+{
+    // (1)
+public:
+    explicit full_time_worker(std::string n): name_(std::move(n))
+    {
+    }
+
+    void operator()() const
+    {
+        synchronized_out(name_ + ": " + "Morning work done!\n");
+        work_done.arrive_and_wait(); // Wait until morning work is done     (3)
+        synchronized_out(name_ + ": " + "Afternoon work done!\n");
+        work_done.arrive_and_wait(); // Wait until afternoon work is done   (4)
+    }
+
+private:
+    std::string name_;
+};
+
+class part_time_worker
+{
+    // (2)
+public:
+    explicit part_time_worker(std::string n): name_(std::move(n))
+    {
+    }
+
+    void operator()() const
+    {
+        synchronized_out(name_ + ": " + "Morning work done!\n");
+        work_done.arrive_and_drop(); // Wait until morning work is done  // (5)
+    }
+
+private:
+    std::string name_;
+};
+
+//--------------------------------------------------------------------//
+// Latch
+
+std::latch work_done_latch(6);
+std::latch go_home(1);
+
+class worker
+{
+public:
+    explicit worker(std::string n): name_(n), n_(std::move(n))
+    {
+    }
+
+    // Boss variant
+    // void operator()() const
+    // {
+    //     // notify the boss when work is done
+    //     synchronized_out(name_ + ": " + "Work done!\n");
+    //     work_done_latch.count_down(); // (2)
+    //
+    //     // waiting before going home
+    //     go_home.wait(); // (5)
+    //     synchronized_out(name_ + ": " + "Good bye!\n");
+    // }
+
+    void operator()() const
+    {
+        synchronized_out(name_ + ": " + "Work done!\n");
+        work_done_latch.arrive_and_wait(); // wait until all work is done  (1)
+        synchronized_out(name_ + ": " + "See you tomorrow!\n");
+    }
+
+private:
+    std::string name_;
+    std::string n_;
+};
+
 int main(int argc, char* argv[])
 {
     // const auto b = sequential_quick_sort(i);
     //
     // std::cout << b << '\n';
-    std::list<int> i = {1, 2, 3, 3, 2, 1, 5, 4, 5, 67, 3, 21, 3, 325, 346, 6};
-    std::list<int> i_2 = {8, 9, 10, 11, 12};
+    std::list i = {1, 2, 3, 3, 2, 1, 5, 4, 5, 67, 3, 21, 3, 325, 346, 6};
+    std::list i_2 = {8, 9, 10, 11, 12};
     auto iterate = i.begin();
     std::advance(iterate, 2);
     i.splice(iterate, i_2);
@@ -894,4 +990,72 @@ int main(int argc, char* argv[])
     auto first = convert("abc");
     auto second = convert("2");
     std::cout << *first + *second;
+    //--------------------------------------------------------------------//
+    // Barrier
+    std::cout << '\n';
+
+    part_time_worker herb("  Herb");
+    std::thread herb_work(herb);
+
+    part_time_worker scott("    Scott");
+    std::thread scott_work(scott);
+
+    part_time_worker bjarne("      Bjarne");
+    std::thread bjarne_work(bjarne);
+
+    part_time_worker andrei("        Andrei");
+    std::thread andrei_work(andrei);
+
+    part_time_worker andrew("          Andrew");
+    std::thread andrew_work(andrew);
+
+    part_time_worker david("            David");
+    std::thread david_work(david);
+
+    herb_work.join();
+    scott_work.join();
+    bjarne_work.join();
+    andrei_work.join();
+    andrew_work.join();
+    david_work.join();
+    //--------------------------------------------------------------------//
+    // Latch
+    // Boss variant
+    // std::cout << '\n';
+    //
+    // std::cout << "BOSS: START WORKING! " << '\n';
+
+    worker herb_latch("  Herb");
+    std::thread herbWork(herb_latch);
+
+    worker scott_latch("    Scott");
+    std::thread scottWork(scott_latch);
+
+    worker bjarne_latch("      Bjarne");
+    std::thread bjarneWork(bjarne_latch);
+
+    worker andrei_latch("        Andrei");
+    std::thread andreiWork(andrei_latch);
+
+    worker andrew_latch("          Andrew");
+    std::thread andrewWork(andrew_latch);
+
+    worker david_latch("            David");
+    std::thread davidWork(david_latch);
+
+    // Boss variant
+    // work_done_latch.wait(); // (3)
+    //
+    // std::cout << '\n';
+    //
+    // go_home.count_down();
+    //
+    // std::cout << "BOSS: GO HOME!" << '\n';
+
+    herbWork.join();
+    scottWork.join();
+    bjarneWork.join();
+    andreiWork.join();
+    andrewWork.join();
+    davidWork.join();
 }

@@ -32,7 +32,7 @@ struct user
 auto callback_test()
 {
     auto p_john = std::make_unique<user>(user{"John"});
-    auto name_callback = p_john->get_name_callback();
+    const auto name_callback = p_john->get_name_callback();
     p_john.reset(); // Destroying object, trying to access a deleted memory region
 
     const auto new_name = name_callback(" is Super!");
@@ -94,9 +94,8 @@ int main()
     std::cout << counter << std::endl;
 
 
-    std::atomic<int> counter1 = 0;
+    std::atomic counter1 = 0;
 
-    std::vector<std::thread> threads1;
     for (auto i = 0; i < 5; ++i)
     {
         threads.emplace_back([&counter1]()
@@ -108,7 +107,7 @@ int main()
         });
     }
 
-    for (auto& thread : threads1)
+    for (std::vector<std::thread> threads1; auto& thread : threads1)
     {
         thread.join();
     }

@@ -6,7 +6,8 @@ void task_1()
 {
     for (auto i = 0; i < 100; ++i)
     {
-        std::cout << "Task 1: Thread with ID " << std::this_thread::get_id() << " in loop " << i <<  std::endl;
+        std::cout << "Task 1: Thread with ID " 
+            << std::this_thread::get_id() << " in loop " << i <<  std::endl;
     }
 }
 
@@ -14,7 +15,8 @@ void task_2()
 {
     for (auto i = 0; i < 100; ++i)
     {
-        std::cout << "Task 2: Thread with ID " << std::this_thread::get_id() << " in loop " << i << std::endl;
+        std::cout << "Task 2: Thread with ID " 
+            << std::this_thread::get_id() << " in loop " << i << std::endl;
     }
 }
 
@@ -45,8 +47,8 @@ int main()
 
     // The std::packaged_task is one of the possible ways of associating a task with an std::future.
     // full concurrent result because we used std::thread
-    std::packaged_task<void()> job1(task_1);
-    std::packaged_task<void()> job2(task_2);
+    std::packaged_task job1(task_1);
+    std::packaged_task job2(task_2);
 
     auto o1 = job1.get_future();
     auto o2 = job2.get_future();
