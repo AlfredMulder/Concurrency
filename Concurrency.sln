@@ -21,6 +21,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Semaphore", "Semaphore\Sema
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Coroutine", "Coroutine\Coroutine.vcxproj", "{CECCE6B9-E7D4-487C-929E-3798C51D6D9F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Libcds", "Libcds\Libcds.vcxproj", "{3986F65F-1E3B-4896-8729-4CDB80AFC347}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -101,6 +103,14 @@ Global
 		{CECCE6B9-E7D4-487C-929E-3798C51D6D9F}.Release|x64.Build.0 = Release|x64
 		{CECCE6B9-E7D4-487C-929E-3798C51D6D9F}.Release|x86.ActiveCfg = Release|Win32
 		{CECCE6B9-E7D4-487C-929E-3798C51D6D9F}.Release|x86.Build.0 = Release|Win32
+		{3986F65F-1E3B-4896-8729-4CDB80AFC347}.Debug|x64.ActiveCfg = Debug|x64
+		{3986F65F-1E3B-4896-8729-4CDB80AFC347}.Debug|x64.Build.0 = Debug|x64
+		{3986F65F-1E3B-4896-8729-4CDB80AFC347}.Debug|x86.ActiveCfg = Debug|Win32
+		{3986F65F-1E3B-4896-8729-4CDB80AFC347}.Debug|x86.Build.0 = Debug|Win32
+		{3986F65F-1E3B-4896-8729-4CDB80AFC347}.Release|x64.ActiveCfg = Release|x64
+		{3986F65F-1E3B-4896-8729-4CDB80AFC347}.Release|x64.Build.0 = Release|x64
+		{3986F65F-1E3B-4896-8729-4CDB80AFC347}.Release|x86.ActiveCfg = Release|Win32
+		{3986F65F-1E3B-4896-8729-4CDB80AFC347}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

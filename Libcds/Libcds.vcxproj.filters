@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Synchronizing_concurrent_operations.cpp">
+    <ClCompile Include="Libcds.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -269,7 +269,7 @@ void gui_thread()
         get_and_process_gui_message();
         std::packaged_task<void()> task;
         {
-            std::lock_guard<std::mutex> lk(m_2);
+            std::lock_guard lk(m_2);
             if (tasks.empty())
             {
                 continue;
@@ -297,7 +297,7 @@ bool wait_loop()
 {
     auto const timeout = std::chrono::steady_clock::now() +
         std::chrono::milliseconds(500);
-    std::unique_lock<std::mutex> lk(m);
+    std::unique_lock lk(m);
     while (!done)
     {
         if (cv.wait_until(lk, timeout) == std::cv_status::timeout)
